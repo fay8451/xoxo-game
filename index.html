@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic-Tac-Toe</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            cream: '#FFF8E1',
+            purple: '#483D8B',
+            lightpurple: '#6A5ACD',
+            lightblue: '#B0C4DE',
+            beige: '#E6D9A8',
+            darkgray: '#333333',
+            woodbrown: '#4A3C2A',
+            lavender: '#D8C6E0',
+            gold: '#FFD700',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    html, body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #FFF8E1;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      width: 100%;
+      max-width: 500px;
+      padding: 20px;
+      box-sizing: border-box;
+      position: relative;
+    }
+    
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      width: 100%;
+      max-width: 350px;
+      margin: 0 auto;
+    }
+    
+    .cell {
+      aspect-ratio: 1;
+      background-color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      position: relative; /* Add position relative for the overlay */
+    }
+    
+    .cell.x {
+      color: #333;
+    }
+    
+    .cell.o {
+      color: #333;
+    }
+    
+    /* New pending style with overlay approach - make it more visible */
+    .cell.pending::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(216, 198, 224, 0.8); /* Lavender with more opacity */
+      z-index: 1;
+      pointer-events: none; /* Allow clicks to pass through */
+      will-change: opacity; /* Hint to browser to optimize animation */
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    input::placeholder {
+      color: #B0C4DE;
+      opacity: 0.7;
+    }
+
+    .input-container {
+      max-width: 300px;
+      margin: 0 auto;
+    }
+
+    /* Logo positioning */
+    .logo-container {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .logo-heart {
+      position: absolute;
+      right: -20px;
+      top: 0;
+    }
+
+    /* Back button positioning */
+    .back-button {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    /* Connection status indicator */
+    .connection-status {
+      position: absolute;
+      top: 0;
+      right: 0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .connection-status.connected {
+      background-color: #D1FAE5;
+      color: #065F46;
+    }
+    
+    .connection-status.disconnected {
+      background-color: #FEE2E2;
+      color: #B91C1C;
+    }
+    
+    .connection-status.connecting {
+      background-color: #FEF3C7;
+      color: #92400E;
+    }
+
+    /* Score display styling */
+    .score-display {
+      display: flex;
+      justify-content: space-between;
+      background-color: white;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .score-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .score-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .score-label {
+      font-size: 0.75rem;
+      color: #666;
+    }
+    
+    .ultimate-winner {
+      animation: winnerPulse 2s infinite;
+      color: #FFD700;
+      font-weight: bold;
+    }
+    
+    @keyframes winnerPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    /* Responsive adjustments */
+    @media (max-height: 700px) {
+      .game-board {
+        max-width: 300px;
+      }
+      .cell {
+        font-size: 2rem;
+      }
+      h1.text-6xl {
+        font-size: 3rem;
+      }
+      h1.text-4xl {
+        font-size: 2.5rem;
+      }
+      .py-4 {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+      }
+      .mb-10 {
+        margin-bottom: 1.5rem;
+      }
+      .mb-8 {
+        margin-bottom: 1rem;
+      }
+    }
+    
+    /* Move acknowledgment animation - make it more obvious with lavender color */
+    @keyframes ackPulse {
+      0% { opacity: 0.7; }
+      50% { opacity: 1; }
+      100% { opacity: 0.7; }
+    }
+    
+    .cell.ack-pending::after {
+      animation: ackPulse 0.8s infinite; /* Faster animation */
+    }
+    
+    /* Trophy icon for ultimate winner */
+    .trophy-icon {
+      color: white;
+      margin-left: 5px;
+      display: inline-block;
+      animation: trophyShine 1.5s infinite;
+      text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+    }
+
+    #ultimate-winner-banner {
+      box-shadow: 0 0 15px rgba(106, 90, 205, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    /* First player indicator */
+    .first-player-indicator {
+      background-color: rgba(255, 215, 0, 0.3); /* เปลี่ยนเป็นสีเหลืองโปร่งแสง */
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 0.8rem;
+      margin-top: 4px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body class="bg-cream text-darkgray">
+  <div class="container">
+    <!-- Connection Status Indicator -->
+    <div id="connection-status" class="connection-status connecting">
+      Connecting...
+    </div>
+    
+    <!-- Intro Screen -->
+    <div id="intro-screen" class="w-full p-4 text-center">
+      <div class="flex justify-center items-center mb-8">
+        <div class="logo-container">
+          <h1 class="text-6xl font-bold tracking-wide text-woodbrown">XOXO</h1>
+          <span class="logo-heart text-red-500 text-6xl">❤</span>
+        </div>
+      </div>
+      
+      <div class="mb-12">
+        <p class="text-xl mb-2 text-woodbrown">Real-time Tic-Tac-Toe</p>
+        <p class="text-sm text-gray-600">Play with friends anywhere!</p>
+      </div>
+      
+      <div class="flex justify-center">
+        <button id="intro-start-btn" class="py-3 px-10 bg-lightpurple hover:bg-purple text-white rounded-lg font-medium text-lg transition-colors">
+          Start Game!
+        </button>
+      </div>
+    </div>
+
+    <!-- Name Entry Screen -->
+    <div id="name-entry-screen" class="hidden w-full p-4 text-center">
+      <div class="flex justify-center items-center mb-2">
+        <div class="logo-container">
+          <h1 class="text-4xl font-bold tracking-wide">XOXO</h1>
+          <span class="logo-heart text-red-500 text-4xl" style="right: -16px;">❤</span>
+        </div>
+      </div>
+      
+      <p class="text-lg mb-4 tracking-wide font-medium">ENTER YOUR NAME TO HAVE SOME FUN!</p>
+      
+      <div class="mb-2">
+        <div class="inline-block bg-lavender py-1 px-6 rounded-md mb-2 font-medium">
+          NAME
+        </div>
+      </div>
+      
+      <div class="mb-5 input-container">
+        <input type="text" id="player-name" placeholder="Your name" class="w-full p-3 rounded-lg border border-lavender bg-white text-center font-medium">
+      </div>
+
+      <div class="flex justify-center gap-4">
+        <button id="create-room-btn" class="py-3 px-6 bg-lightblue hover:bg-opacity-80 rounded-lg font-medium text-lg">
+          CREATE A ROOM
+        </button>
+        <button id="go-to-join-btn" class="py-3 px-10 bg-beige hover:bg-opacity-80 rounded-lg font-medium text-lg">
+          JOIN
+        </button>
+      </div>
+    </div>
+
+    <!-- Join Room Screen -->
+    <div id="join-room-screen" class="hidden w-full p-4 text-center">
+      <button id="back-to-name-btn" class="back-button py-2 px-4 bg-beige hover:bg-opacity-80 rounded-lg font-medium text-sm">
+        ← BACK
+      </button>
+      
+      <div class="mt-6 mb-4">
+        <h1 class="text-5xl font-bold text-purple tracking-wide">PARTY</h1>
+      </div>
+      
+      <p class="text-xl mb-4 tracking-wide font-medium">ENTER YOUR FRIEND'S ROOM CODE</p>
+      
+      <div class="mb-5 input-container">
+        <input type="text" id="join-code" placeholder="ROOM CODE" maxlength="6" class="w-full p-3 rounded-lg border border-lavender bg-white text-center uppercase tracking-widest font-medium text-lg">
+      </div>
+
+      <button id="join-room-btn" class="py-3 px-10 bg-lightblue hover:bg-opacity-80 rounded-lg font-medium text-darkgray text-lg">
+        JOIN GAME
+      </button>
+    </div>
+
+    <!-- Create Room Screen -->
+    <div id="create-room-screen" class="hidden w-full p-4 text-center">
+      <button id="back-from-create-btn" class="back-button py-2 px-4 bg-beige hover:bg-opacity-80 rounded-lg font-medium text-sm">
+        ← BACK
+      </button>
+      
+      <div class="mt-6 mb-3 flex justify-center">
+        <div class="logo-container">
+          <h1 class="text-4xl font-bold tracking-wide">XOXO</h1>
+          <span class="logo-heart text-red-500 text-4xl" style="right: -16px;">❤</span>
+        </div>
+      </div>
+      
+      <p class="text-lg mb-3 tracking-wide font-medium">SHARE THIS CODE WITH YOUR FRIEND</p>
+      
+      <div id="room-code-display" class="mb-5 p-4 bg-white rounded-lg border border-lavender relative input-container">
+        <span id="room-code" class="text-3xl font-mono font-bold tracking-widest"></span>
+        <button id="copy-code-btn" class="absolute top-2 right-2 p-2 text-lavender hover:text-purple">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
+      </div>
+
+      <button id="start-game-btn" class="py-3 px-10 bg-lightblue hover:bg-opacity-80 rounded-lg font-medium text-lg">
+        START GAME
+      </button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="hidden w-full p-4 text-center">
+      <button id="back-to-home-btn" class="back-button py-2 px-4 bg-lavender hover:bg-opacity-80 rounded-lg font-medium text-sm flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-1">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        HOME
+      </button>
+      
+      <div class="mt-6 mb-3 flex justify-center">
+        <div class="logo-container">
+          <h1 class="text-4xl font-bold tracking-wide">XOXO</h1>
+          <span class="logo-heart text-red-500 text-4xl" style="right: -16px;">❤</span>
+        </div>
+      </div>
+      
+      <!-- Score Display -->
+      <div class="score-display mb-3">
+        <div class="score-item">
+          <div class="score-value" id="player-score">0</div>
+          <div class="score-label">You (<span id="player-symbol">X</span>)</div>
+          <div class="font-semibold text-darkgray" id="player-name-display"></div>
+          <div id="player-first-indicator" class="first-player-indicator hidden">Playing</div>
+        </div>
+        <div class="text-center my-auto text-2xl font-bold">VS</div>
+        <div class="score-item">
+          <div class="score-value" id="opponent-score">0</div>
+          <div class="score-label">Opponent (<span id="opponent-symbol">O</span>)</div>
+          <div class="font-semibold text-darkgray" id="opponent-name-display">Waiting...</div>
+          <div id="opponent-first-indicator" class="first-player-indicator hidden">Playing</div>
+        </div>
+      </div>
+      
+      <!-- Ultimate Winner Banner -->
+      <div id="ultimate-winner-banner" class="hidden mb-3 py-2 px-4 bg-lightpurple text-white rounded-lg font-bold text-lg animate-pulse">
+        <span id="ultimate-winner-text"></span>
+        <span class="trophy-icon">🏆</span>
+      </div>
+      
+      <div class="game-board mb-5 border-4 border-lavender rounded-md overflow-hidden">
+        <div class="cell border border-lavender" data-index="0"></div>
+        <div class="cell border border-lavender" data-index="1"></div>
+        <div class="cell border border-lavender" data-index="2"></div>
+        <div class="cell border border-lavender" data-index="3"></div>
+        <div class="cell border border-lavender" data-index="4"></div>
+        <div class="cell border border-lavender" data-index="5"></div>
+        <div class="cell border border-lavender" data-index="6"></div>
+        <div class="cell border border-lavender" data-index="7"></div>
+        <div class="cell border border-lavender" data-index="8"></div>
+      </div>
+
+      <div id="game-status" class="text-2xl font-medium tracking-wide text-gray-600 mb-4">
+        WAIT
+      </div>
+
+      <div class="flex justify-center gap-4">
+        <button id="play-again-btn" class="hidden py-3 px-10 bg-lavender hover:bg-opacity-80 rounded-lg font-medium text-lg cursor-pointer">
+          PLAY AGAIN
+        </button>
+        <button id="reset-scores-btn" class="hidden py-3 px-10 bg-beige hover:bg-opacity-80 rounded-lg font-medium text-lg cursor-pointer">
+          RESET SCORES
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-4 right-4 max-w-xs bg-white border border-lavender p-4 rounded-md shadow-lg transform transition-transform duration-300 translate-x-full">
+    <div id="toast-title" class="font-bold"></div>
+    <div id="toast-message" class="text-sm"></div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="/public/js/websocket-client.js"></script>
+  <script>
+    // เพิ่มฟังก์ชันสำรองสำหรับการคัดลอกข้อความ
+    function fallbackCopyTextToClipboard(text) {
+      try {
+        // สร้าง textarea ชั่วคราว
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        
+        // ซ่อน textarea จากการมองเห็น
+        textArea.style.position = 'fixed';
+        textArea.style.top = '0';
+        textArea.style.left = '0';
+        textArea.style.width = '2em';
+        textArea.style.height = '2em';
+        textArea.style.padding = '0';
+        textArea.style.border = 'none';
+        textArea.style.outline = 'none';
+        textArea.style.boxShadow = 'none';
+        textArea.style.background = 'transparent';
+        
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          // พยายามใช้คำสั่ง execCommand เพื่อคัดลอก
+          const successful = document.execCommand('copy');
+          if (successful) {
+            showToast('Copied!', 'Room code copied to clipboard');
+          } else {
+            // ถ้าไม่สำเร็จ ให้แสดงรหัสห้องและแนะนำให้คัดลอกด้วยตนเอง
+            showToast('Copy manually', `Your room code is: ${text}`);
+          }
+        } catch (err) {
+          showToast('Copy manually', `Your room code is: ${text}`);
+        }
+        
+        // ลบ textarea ชั่วคราว
+        document.body.removeChild(textArea);
+      } catch (err) {
+        showToast('Copy manually', `Your room code is: ${text}`);
+      }
+    }
+    
+    // Game state
+    let gameState = {
+      roomCode: '',
+      playerName: '',
+      playerSymbol: '',
+      opponentName: '',
+      board: Array(9).fill(null),
+      currentTurn: 'X',
+      status: 'waiting',
+      winner: null,
+      pendingMoves: {}, // Track moves waiting for ACK
+      scores: {
+        X: 0,
+        O: 0
+      },
+      ultimateWinner: null,
+      lastWinner: null // Track the last winner
+    };
+
+    // Constants
+    const WINS_TO_ULTIMATE_VICTORY = 3;
+
+    // DOM Elements
+    const screens = {
+      intro: document.getElementById('intro-screen'),
+      joinRoom: document.getElementById('join-room-screen'),
+      nameEntry: document.getElementById('name-entry-screen'),
+      createRoom: document.getElementById('create-room-screen'),
+      game: document.getElementById('game-screen')
+    };
+
+    // Connection status element
+    const connectionStatus = document.getElementById('connection-status');
+
+    // Update connection status UI
+    function updateConnectionStatus(status) {
+      connectionStatus.className = 'connection-status ' + status;
+      
+      if (status === 'connected') {
+        connectionStatus.textContent = 'Connected';
+      } else if (status === 'disconnected') {
+        connectionStatus.textContent = 'Disconnected';
+      } else if (status === 'connecting') {
+        connectionStatus.textContent = 'Connecting...';
+      }
+    }
+
+    // Periodically check if the connection is still alive
+    function startConnectionMonitoring() {
+      // Check connection status every 5 seconds
+      setInterval(() => {
+        if (websocketClient.socket && websocketClient.socket.readyState === WebSocket.OPEN) {
+          updateConnectionStatus('connected');
+        } else if (websocketClient.socket && websocketClient.socket.readyState === WebSocket.CONNECTING) {
+          updateConnectionStatus('connecting');
+        } else {
+          updateConnectionStatus('disconnected');
+        }
+      }, 5000);
+    }
+
+    // Connect to WebSocket server
+function connectWebSocket() {
+  // เพิ่มการตรวจสอบว่ากำลังรันใน Electron หรือไม่
+  const isElectron = window && window.process && window.process.type;
+  
+  // เพิ่มการดีบัก
+  console.log("Debug WebSocket Connection:");
+  console.log("Current URL:", window.location.href);
+  console.log("Hostname:", window.location.hostname);
+  console.log("Protocol:", window.location.protocol);
+  console.log("Running in Electron:", isElectron);
+  console.log("User Agent:", navigator.userAgent);
+  
+  let wsUrl;
+  
+  if (isElectron) {
+    // ตรวจสอบว่ามีการใช้ localtunnel URL หรือไม่
+    const localtunnelUrl = localStorage.getItem('localtunnelUrl');
+    
+    if (localtunnelUrl) {
+      // ใช้ URL ของ localtunnel ที่บันทึกไว้
+      wsUrl = `wss://${localtunnelUrl.replace(/^https?:\/\//, '')}`;
+      console.log('Using saved localtunnel WebSocket URL:', wsUrl);
+    } else {
+      // ใช้ localhost สำหรับการทดสอบใน Electron
+      wsUrl = 'wss://localhost:3001';
+      console.log('Using default Electron WebSocket URL:', wsUrl);
+    }
+  } else if (window.location.hostname.includes('loca.lt')) {
+    // สำคัญ: เมื่อใช้ localtunnel ให้ใช้ wss:// กับโดเมนเดียวกัน
+    wsUrl = `wss://${window.location.host}`;
+    console.log('Using localtunnel WebSocket URL:', wsUrl);
+  } else {
+    // ใช้การตรวจสอบโปรโตคอลแบบปกติ
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname || 'localhost';
+    const port = 3001;
+    wsUrl = `${protocol}//${host}:${port}`;
+    console.log('Using standard WebSocket URL:', wsUrl);
+  }
+  
+  console.log('Connecting to WebSocket server at:', wsUrl);
+  updateConnectionStatus('connecting');
+  
+  websocketClient.connect(wsUrl)
+    .then(() => {
+      updateConnectionStatus('connected');
+      checkSecureWebSocket(); // ตรวจสอบว่าใช้ WSS หรือไม่
+    })
+    .catch(error => {
+      console.error('Failed to connect:', error);
+      updateConnectionStatus('disconnected');
+    });
+  
+  // Set up event listeners for the WebSocket client
+  websocketClient.on('ROOM_CREATED', handleRoomCreated);
+  websocketClient.on('ROOM_JOINED', handleRoomJoined);
+  websocketClient.on('OPPONENT_JOINED', handleOpponentJoined);
+  websocketClient.on('GAME_UPDATE', handleGameUpdate);
+  websocketClient.on('GAME_RESET', handleGameReset);
+  websocketClient.on('SCORES_RESET', handleScoresReset);
+  websocketClient.on('OPPONENT_LEFT', handleOpponentLeft);
+  websocketClient.on('OPPONENT_DISCONNECTED', handleOpponentDisconnected);
+  websocketClient.on('OPPONENT_RECONNECTED', handleOpponentReconnected);
+  websocketClient.on('ROOM_CLOSED', handleRoomClosed);
+  websocketClient.on('RECONNECTED_TO_ROOM', handleReconnectedToRoom);
+  websocketClient.on('MOVE_ACK', handleMoveAck);
+  websocketClient.on('ERROR', handleError);
+  websocketClient.on('TEST_CONNECTION_RESPONSE', handleTestResponse);
+  websocketClient.on('PONG', handlePongResponse);
+  
+  // Add connection state change listeners
+  if (websocketClient.socket) {
+    websocketClient.socket.addEventListener('open', () => {
+      updateConnectionStatus('connected');
+    });
+    
+    websocketClient.socket.addEventListener('close', () => {
+      updateConnectionStatus('disconnected');
+    });
+    
+    websocketClient.socket.addEventListener('error', () => {
+      updateConnectionStatus('disconnected');
+    });
+  }
+}
+
+    // เพิ่มฟังก์ชันตรวจสอบว่าใช้ WSS หรือไม่
+    function checkSecureWebSocket() {
+      // เพิ่มตัวแสดงสถานะ WSS ในหน้าเว็บ
+      const connectionStatusElement = document.getElementById('connection-status');
+      if (connectionStatusElement) {
+        // ตรวจสอบว่าใช้ WSS หรือไม่
+        const isSecure = window.location.protocol === 'https:';
+        const wsProtocol = isSecure ? 'WSS (Secure)' : 'WS (Not Secure)';
+        
+        // เพิ่มข้อมูล WebSocket Protocol ในสถานะการเชื่อมต่อ
+        connectionStatusElement.setAttribute('data-protocol', wsProtocol);
+        
+        // เพิ่ม CSS เพื่อแสดงข้อมูล WebSocket Protocol
+        const style = document.createElement('style');
+        style.textContent = `
+          .connection-status::after {
+            content: " - " attr(data-protocol);
+            font-size: 10px;
+            opacity: 0.8;
+          }
+          
+          .connection-status[data-protocol="WSS (Secure)"]::after {
+            color: #10B981;
+          }
+          
+          .connection-status[data-protocol="WS (Not Secure)"]::after {
+            color: #F59E0B;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+
+    // เพิ่มฟังก์ชันแสดงข้อมูล WSS อย่างละเอียด
+    function showDetailedWssInfo() {
+      // สร้างแท็บแสดงข้อมูล WSS
+      const infoTab = document.createElement('div');
+      infoTab.className = 'wss-info-tab';
+      infoTab.innerHTML = `
+        <div class="wss-info-header">WebSocket Info</div>
+        <div class="wss-info-content">
+          <div>URL: <span id="wss-url">Checking...</span></div>
+          <div>Protocol: <span id="wss-protocol">Checking...</span></div>
+          <div>Status: <span id="wss-status">Checking...</span></div>
+          <div>Latency: <span id="wss-latency">Checking...</span></div>
+        </div>
+      `;
+      
+      // เพิ่ม CSS
+      const style = document.createElement('style');
+      style.textContent = `
+        .wss-info-tab {
+          position: fixed;
+          bottom: 10px;
+          right: 10px;
+          background: rgba(0, 0, 0, 0.7);
+          color: white;
+          border-radius: 5px;
+          padding: 5px;
+          font-size: 12px;
+          z-index: 9999;
+        }
+        .wss-info-header {
+          font-weight: bold;
+          text-align: center;
+          padding-bottom: 3px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .wss-info-content {
+          padding: 5px;
+        }
+        #wss-protocol.secure {
+          color: #10B981;
+        }
+        #wss-protocol.not-secure {
+          color: #F59E0B;
+        }
+        #wss-status.connected {
+          color: #10B981;
+        }
+        #wss-status.disconnected {
+          color: #EF4444;
+        }
+      `;
+      
+      document.head.appendChild(style);
+      document.body.appendChild(infoTab);
+      
+      // อัปเดตข้อมูล
+      function updateWssInfo() {
+        const wsUrl = document.getElementById('wss-url');
+        const wsProtocol = document.getElementById('wss-protocol');
+        const wsStatus = document.getElementById('wss-status');
+        const wsLatency = document.getElementById('wss-latency');
+        
+        if (websocketClient && websocketClient.socket) {
+          const url = websocketClient.serverUrl || 'Unknown';
+          const isSecure = url.startsWith('wss://');
+          const isConnected = websocketClient.isConnected();
+          
+          wsUrl.textContent = url;
+          wsProtocol.textContent = isSecure ? 'WSS (Secure)' : 'WS (Not Secure)';
+          wsProtocol.className = isSecure ? 'secure' : 'not-secure';
+          wsStatus.textContent = isConnected ? 'Connected' : 'Disconnected';
+          wsStatus.className = isConnected ? 'connected' : 'disconnected';
+          
+          // ทดสอบความล่าช้า (latency)
+          if (isConnected) {
+            const startTime = Date.now();
+            websocketClient.send({
+              type: 'PING',
+              timestamp: startTime
+            });
+            
+            // ตั้งค่าการฟังข้อความ PONG
+            if (!window.pongListener) {
+              window.pongListener = true;
+              websocketClient.on('PONG', (data) => {
+                const endTime = Date.now();
+                const latency = endTime - data.originalTimestamp;
+                wsLatency.textContent = `${latency}ms`;
+              });
+            }
+          } else {
+            wsLatency.textContent = 'N/A';
+          }
+        } else {
+          wsUrl.textContent = 'Not initialized';
+          wsProtocol.textContent = 'N/A';
+          wsStatus.textContent = 'Not initialized';
+          wsLatency.textContent = 'N/A';
+        }
+      }
+      
+      // อัปเดตข้อมูลทุก 2 วินาที
+      updateWssInfo();
+      setInterval(updateWssInfo, 2000);
+    }
+
+
+    // ฟังก์ชันจัดการการตอบกลับการทดสอบ
+    function handleTestResponse(data) {
+      console.log('✅ Received test response:', data);
+      const latency = Date.now() - data.originalTimestamp;
+      console.log(`✅ Test connection latency: ${latency}ms`);
+  console.log(`✅ Connection is ${data.secure ? 'secure (WSS)' : 'not secure (WS)'}`);
+  
+  // แสดง alert เพื่อให้ผู้ใช้เห็นผลลัพธ์
+  alert(`Test response received!\nLatency: ${latency}ms\nConnection: ${data.secure ? 'Secure (WSS)' : 'Not secure (WS)'}`);
+}
+
+// ฟังก์ชันจัดการการตอบกลับ PONG
+function handlePongResponse(data) {
+  const latency = Date.now() - data.originalTimestamp;
+  console.log(`✅ PONG received. Latency: ${latency}ms`);
+  
+  // อัปเดตข้อมูลใน UI ถ้ามี element ที่แสดงค่า latency
+  const latencyElement = document.getElementById('wss-latency');
+  if (latencyElement) {
+    latencyElement.textContent = `${latency}ms`;
+    latencyElement.style.color = latency < 100 ? '#10B981' : '#F59E0B';
+  }
+}
+
+// เรียกใช้ฟังก์ชันเหล่านี้หลังจากโหลดหน้าเว็บ
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("DOM fully loaded - initializing WebSocket test functions");
+  try {
+    checkSecureWebSocket();
+    console.log("Secure WebSocket check completed");
+    
+    showDetailedWssInfo();
+    console.log("Detailed WSS info displayed");
+    
+    addTestButton();
+    console.log("Test button initialization completed");
+  } catch (error) {
+    console.error("Error initializing WebSocket test functions:", error);
+  }
+});
+
+    // Send message to WebSocket server
+    function sendMessage(message) {
+      if (websocketClient.isConnected()) {
+        websocketClient.send(message);
+        return true;
+      } else {
+        console.error('WebSocket is not connected');
+        showToast('Connection Error', 'Not connected to server. Please restart the app.');
+        updateConnectionStatus('disconnected');
+        return false;
+      }
+    }
+
+    // Notify server that player is leaving the room
+    function leaveRoom() {
+      if (gameState.roomCode && gameState.playerSymbol) {
+        sendMessage({
+          type: 'LEAVE_ROOM',
+          roomCode: gameState.roomCode,
+          player: gameState.playerSymbol
+        });
+        
+        // Reset game state
+        gameState.roomCode = '';
+        gameState.opponentName = '';
+        gameState.board = Array(9).fill(null);
+        gameState.status = 'waiting';
+        gameState.winner = null;
+        gameState.pendingMoves = {};
+        gameState.scores = { X: 0, O: 0 };
+        gameState.ultimateWinner = null;
+        gameState.lastWinner = null;
+      }
+    }
+
+    // Show a specific screen
+    function showScreen(screenName) {
+      Object.keys(screens).forEach(key => {
+        screens[key].classList.add('hidden');
+      });
+      screens[screenName].classList.remove('hidden');
+    }
+
+    // Generate a random room code
+    function generateRoomCode() {
+      const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let result = '';
+      for (let i = 0; i < 6; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+      return result;
+    }
+
+    // Generate a unique move ID
+    function generateMoveId() {
+      return Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // Show a toast notification
+    function showToast(title, message, duration = 3000) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-title').textContent = title;
+      document.getElementById('toast-message').textContent = message;
+      
+      toast.classList.remove('translate-x-full');
+      
+      setTimeout(() => {
+        toast.classList.add('translate-x-full');
+      }, duration);
+    }
+
+    // Update the game board UI
+    function updateBoard() {
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach((cell, index) => {
+        // Clear all classes first
+        cell.className = 'cell border border-lavender';
+        cell.textContent = gameState.board[index] || '';
+        
+        // Add symbol class if the cell has a value
+        if (gameState.board[index]) {
+          cell.classList.add(gameState.board[index].toLowerCase());
+        }
+        
+        // Add pending class if the move is waiting for ACK
+        if (gameState.pendingMoves[index]) {
+          // Use setTimeout to ensure classes are added after rendering
+          setTimeout(() => {
+            cell.classList.add('pending');
+            cell.classList.add('ack-pending');
+          }, 10);
+        }
+      });
+    }
+
+    // Update the first player indicators
+    function updateFirstPlayerIndicator() {
+      const playerFirstIndicator = document.getElementById('player-first-indicator');
+      const opponentFirstIndicator = document.getElementById('opponent-first-indicator');
+      
+      // Hide both indicators first
+      playerFirstIndicator.classList.add('hidden');
+      opponentFirstIndicator.classList.add('hidden');
+      
+      // Show indicator for the current player's turn
+      if (gameState.currentTurn === gameState.playerSymbol) {
+        playerFirstIndicator.classList.remove('hidden');
+      } else {
+        opponentFirstIndicator.classList.remove('hidden');
+      }
+      
+      console.log(`Turn indicators updated. Current turn: ${gameState.currentTurn}, Player symbol: ${gameState.playerSymbol}`);
+    }
+
+    // Update the scores display
+    function updateScores() {
+      // Update score values
+      document.getElementById('player-score').textContent = gameState.scores[gameState.playerSymbol] || 0;
+      
+      const opponentSymbol = gameState.playerSymbol === 'X' ? 'O' : 'X';
+      document.getElementById('opponent-score').textContent = gameState.scores[opponentSymbol] || 0;
+      
+      // Check for ultimate winner
+      const ultimateWinnerBanner = document.getElementById('ultimate-winner-banner');
+      const ultimateWinnerText = document.getElementById('ultimate-winner-text');
+      const resetScoresBtn = document.getElementById('reset-scores-btn');
+
+      if (gameState.ultimateWinner) {
+        ultimateWinnerBanner.classList.remove('hidden');
+        
+        if (gameState.ultimateWinner === gameState.playerSymbol) {
+          ultimateWinnerText.textContent = 'YOU ARE THE CHAMPION!';
+        } else {
+          ultimateWinnerText.textContent = 'OPPONENT IS THE CHAMPION!';
+        }
+        
+        // Show reset scores button
+        resetScoresBtn.classList.remove('hidden');
+      } else {
+        ultimateWinnerBanner.classList.add('hidden');
+        resetScoresBtn.classList.add('hidden');
+      }
+      
+      // Update first player indicator
+      updateFirstPlayerIndicator();
+    }
+
+    // Update the game status message
+    function updateGameStatus() {
+      const statusElement = document.getElementById('game-status');
+      const playAgainBtn = document.getElementById('play-again-btn');
+      
+      if (gameState.status === 'waiting') {
+        statusElement.textContent = 'WAIT';
+      } else if (gameState.status === 'draw') {
+        statusElement.textContent = 'DRAW';
+      } else if (gameState.status === 'ended') {
+        statusElement.textContent = gameState.winner === gameState.playerSymbol ? 'YOU WIN' : 'YOU LOSE';
+      } else {
+        statusElement.textContent = gameState.currentTurn === gameState.playerSymbol ? 'YOUR TURN' : 'OPPONENT\'S TURN';
+      }
+      
+      // Always hide play again button if there's an ultimate winner
+      if (gameState.ultimateWinner) {
+        playAgainBtn.classList.add('hidden');
+      } else if (gameState.status === 'ended' || gameState.status === 'draw') {
+        // Only show play again button if there's no ultimate winner and the game is ended or draw
+        playAgainBtn.classList.remove('hidden');
+      } else {
+        playAgainBtn.classList.add('hidden');
+      }
+    }
+
+    // Update player info display
+    function updatePlayerInfo() {
+      document.getElementById('player-name-display').textContent = gameState.playerName;
+      document.getElementById('player-symbol').textContent = gameState.playerSymbol;
+      document.getElementById('opponent-symbol').textContent = gameState.playerSymbol === 'X' ? 'O' : 'X';
+      
+      if (gameState.opponentName) {
+        document.getElementById('opponent-name-display').textContent = gameState.opponentName;
+      } else {
+        document.getElementById('opponent-name-display').textContent = 'Waiting...';
+      }
+    }
+
+    // Initialize the game screen
+    function initGameScreen() {
+      updateBoard();
+      updateGameStatus();
+      updatePlayerInfo();
+      updateScores();
+    }
+
+    // Handle room created event
+    function handleRoomCreated(data) {
+      gameState.roomCode = data.roomCode;
+      gameState.playerSymbol = data.player;
+    }
+
+    // Handle room joined event
+    function handleRoomJoined(data) {
+      gameState.roomCode = data.roomCode;
+      gameState.playerSymbol = data.player;
+      gameState.board = data.gameState.board;
+      gameState.currentTurn = data.gameState.currentTurn;
+      gameState.status = data.gameState.status;
+      gameState.opponentName = data.gameState.players.X.name;
+      gameState.lastWinner = data.gameState.lastWinner;
+      
+      // Set scores
+      if (data.gameState.players.X.score !== undefined) {
+        gameState.scores.X = data.gameState.players.X.score;
+      }
+      if (data.gameState.players.O.score !== undefined) {
+        gameState.scores.O = data.gameState.players.O.score;
+      }
+      
+      // Set ultimate winner if exists
+      gameState.ultimateWinner = data.gameState.ultimateWinner;
+      
+      showScreen('game');
+      initGameScreen();
+    }
+
+    // Handle reconnected to room event
+    function handleReconnectedToRoom(data) {
+      gameState.roomCode = data.roomCode;
+      gameState.playerSymbol = data.player;
+      gameState.board = data.gameState.board;
+      gameState.currentTurn = data.gameState.currentTurn;
+      gameState.status = data.gameState.status;
+      gameState.winner = data.gameState.winner;
+      gameState.lastWinner = data.gameState.lastWinner;
+      
+      // Set opponent name based on player symbol
+      if (data.player === 'X') {
+        gameState.opponentName = data.gameState.players.O.name;
+      } else {
+        gameState.opponentName = data.gameState.players.X.name;
+      }
+      
+      // Set scores
+      if (data.gameState.players.X.score !== undefined) {
+        gameState.scores.X = data.gameState.players.X.score;
+      }
+      if (data.gameState.players.O.score !== undefined) {
+        gameState.scores.O = data.gameState.players.O.score;
+      }
+      
+      // Set ultimate winner if exists
+      gameState.ultimateWinner = data.gameState.ultimateWinner;
+      
+      showScreen('game');
+      initGameScreen();
+      showToast('Reconnected', 'You have reconnected to your game!');
+    }
+
+    // Handle opponent joined event
+    function handleOpponentJoined(data) {
+      gameState.opponentName = data.opponentName;
+      gameState.status = 'playing';
+      gameState.lastWinner = data.gameState.lastWinner;
+      
+      // Update scores if provided
+      if (data.gameState.players.X.score !== undefined) {
+        gameState.scores.X = data.gameState.players.X.score;
+      }
+      if (data.gameState.players.O.score !== undefined) {
+        gameState.scores.O = data.gameState.players.O.score;
+      }
+      
+      if (screens.createRoom.classList.contains('hidden') === false) {
+        showScreen('game');
+      }
+      
+      initGameScreen();
+      showToast('Player Joined', `${data.opponentName} has joined your game!`);
+    }
+
+    // Handle game update event
+    function handleGameUpdate(data) {
+      console.log("Game update received:", data.gameState);
+      
+      gameState.board = data.gameState.board;
+      gameState.currentTurn = data.gameState.currentTurn;
+      gameState.status = data.gameState.status;
+      gameState.winner = data.gameState.winner;
+      gameState.lastWinner = data.gameState.lastWinner;
+      
+      // Update scores if provided
+      if (data.gameState.players) {
+        if (data.gameState.players.X.score !== undefined) {
+          gameState.scores.X = data.gameState.players.X.score;
+        }
+        if (data.gameState.players.O.score !== undefined) {
+          gameState.scores.O = data.gameState.players.O.score;
+        }
+      }
+      
+      // Update ultimate winner if provided
+      if (data.gameState.ultimateWinner !== undefined) {
+        gameState.ultimateWinner = data.gameState.ultimateWinner;
+        
+        // If there's an ultimate winner, hide the play again button immediately
+        if (data.gameState.ultimateWinner) {
+          document.getElementById('play-again-btn').classList.add('hidden');
+          
+          // Show celebration if there's an ultimate winner
+          const isPlayer = data.gameState.ultimateWinner === gameState.playerSymbol;
+          showToast(
+            'Ultimate Victory!', 
+            isPlayer ? 'Congratulations! You won 3 games and are the champion!' : 'Your opponent won 3 games and is the champion!',
+            5000
+          );
+        }
+      }
+      
+      // Clear any pending moves as we've received a game update
+      gameState.pendingMoves = {};
+      
+      updateBoard();
+      updateGameStatus();
+      updateScores();
+      
+      // If there's a winner, show a toast
+      if (data.gameState.status === 'ended' && data.gameState.winner) {
+        const isWinner = data.gameState.winner === gameState.playerSymbol;
+        showToast(isWinner ? 'Victory!' : 'Defeat!', 'X will start the next game.');
+      }
+    }
+
+    // Handle move acknowledgment
+    function handleMoveAck(data) {
+      console.log('Move acknowledged:', data);
+      
+      // Find the cell element
+      const cell = document.querySelector(`.cell[data-index="${data.position}"]`);
+      
+      // Remove the pending status for this move
+      if (gameState.pendingMoves[data.position]) {
+        // Get the minimum time until which we should display the pending state
+        const minDisplayUntil = gameState.pendingMoves[data.position].minDisplayUntil;
+        const now = Date.now();
+        
+        // Calculate how much longer to show the pending state
+        const additionalDelay = Math.max(0, minDisplayUntil - now);
+        
+        console.log(`ACK received for move at position ${data.position}, will clear pending status in ${additionalDelay}ms`);
+        
+        // Store the move ID before deleting the pending move
+        const moveId = gameState.pendingMoves[data.position].moveId;
+        
+        // Delete from pendingMoves but remember we're still showing the visual effect
+        delete gameState.pendingMoves[data.position];
+        
+        // Add a temporary flag to prevent race conditions
+        cell.dataset.pendingClearId = moveId;
+        
+        // Remove pending classes from the cell after the delay
+        if (cell) {
+          setTimeout(() => {
+            // Only remove if this is still the same move (prevent race conditions)
+            if (cell.dataset.pendingClearId === moveId) {
+              cell.classList.remove('pending');
+              cell.classList.remove('ack-pending');
+              delete cell.dataset.pendingClearId;
+              console.log(`Cleared pending status for move at position ${data.position}`);
+            }
+          }, additionalDelay);
+        }
+      }
+    }
+
+    // Handle game reset event
+    function handleGameReset(data) {
+      console.log("Game reset received:", data);
+      
+      // Reset game state completely
+      resetGameBoard();
+      
+      // Update current turn to X (always X starts first)
+      gameState.currentTurn = "X";
+      gameState.lastWinner = data.gameState.lastWinner;
+      
+      console.log(`After reset: currentTurn=${gameState.currentTurn}, lastWinner=${gameState.lastWinner}`);
+      
+      // Update scores if provided
+      if (data.gameState.players) {
+        if (data.gameState.players.X.score !== undefined) {
+          gameState.scores.X = data.gameState.players.X.score;
+        }
+        if (data.gameState.players.O.score !== undefined) {
+          gameState.scores.O = data.gameState.players.O.score;
+        }
+      }
+      
+      // Update ultimate winner if provided
+      if (data.gameState.ultimateWinner !== undefined) {
+        gameState.ultimateWinner = data.gameState.ultimateWinner;
+      }
+      
+      updateScores();
+      updateGameStatus();
+      
+      // Show toast with information about X starting first
+      showToast('Game Reset', 'Game reset! X starts first.');
+    }
+
+    // Handle scores reset event
+    function handleScoresReset(data) {
+      console.log("Scores reset received:", data);
+      
+      // Reset game state completely
+      resetGameBoard();
+      
+      // Reset scores
+      gameState.scores.X = 0;
+      gameState.scores.O = 0;
+      gameState.ultimateWinner = null;
+      gameState.lastWinner = null;
+      gameState.currentTurn = "X"; // X starts first after scores reset
+      
+      updateScores();
+      showToast('Scores Reset', 'All scores have been reset. Starting a new match!');
+    }
+
+    // New function to reset the game board completely
+    function resetGameBoard() {
+      // Clear the board completely
+      gameState.board = Array(9).fill(null);
+      gameState.status = "playing";
+      gameState.winner = null;
+      gameState.pendingMoves = {};
+      
+      // Update the UI - force direct DOM manipulation
+      const cells = document.querySelectorAll('.cell');
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.className = 'cell border border-lavender';
+      });
+      
+      // Update game status and first player indicator
+      updateGameStatus();
+      updateFirstPlayerIndicator();
+    }
+
+    // Handle opponent left event
+    function handleOpponentLeft() {
+      showToast('Opponent Left', 'Your opponent has left the game');
+      gameState.status = 'waiting';
+      gameState.opponentName = '';
+      updateGameStatus();
+      updatePlayerInfo();
+    }
+
+    // Handle opponent disconnected event
+    function handleOpponentDisconnected(data) {
+      showToast('Connection Issue', data.message);
+      document.getElementById('opponent-name-display').textContent = gameState.opponentName + ' (Disconnected)';
+    }
+
+    // Handle opponent reconnected event
+    function handleOpponentReconnected(data) {
+      showToast('Reconnected', data.message);
+      document.getElementById('opponent-name-display').textContent = gameState.opponentName;
+    }
+
+    // Handle room closed event
+    function handleRoomClosed(data) {
+      showToast('Room Closed', data.message);
+      setTimeout(() => {
+        leaveRoom();
+        showScreen('nameEntry');
+      }, 3000);
+    }
+
+    // Handle error event
+    function handleError(data) {
+      showToast('Error', data.message);
+    }
+
+    // Try to reconnect to a room
+    function tryReconnectToRoom(roomCode, playerName) {
+      sendMessage({
+        type: 'RECONNECT_TO_ROOM',
+        roomCode,
+        playerName
+      });
+    }
+
+    // Set up UI event listeners
+    function setupUIEventListeners() {
+      // Show intro screen first
+      showScreen('intro');
+      
+      // Intro screen
+      document.getElementById('intro-start-btn').addEventListener('click', () => {
+        showScreen('nameEntry');
+      });
+      
+      // Name entry screen
+      document.getElementById('create-room-btn').addEventListener('click', () => {
+        const nameInput = document.getElementById('player-name');
+        const playerName = nameInput.value.trim();
+        
+        if (!playerName) {
+          showToast('Name Required', 'Please enter your name');
+          return;
+        }
+        
+        gameState.playerName = playerName;
+        const roomCode = generateRoomCode();
+        gameState.roomCode = roomCode;
+        
+        // Display room code
+        document.getElementById('room-code').textContent = roomCode;
+        
+        showScreen('createRoom');
+        
+        // Create a room on the server
+        sendMessage({
+          type: 'CREATE_ROOM',
+          roomCode,
+          playerName
+        });
+      });
+      
+      document.getElementById('go-to-join-btn').addEventListener('click', () => {
+        const nameInput = document.getElementById('player-name');
+        const playerName = nameInput.value.trim();
+        
+        if (!playerName) {
+          showToast('Name Required', 'Please enter your name');
+          return;
+        }
+        
+        gameState.playerName = playerName;
+        showScreen('joinRoom');
+      });
+      
+      // Back buttons
+      document.getElementById('back-to-name-btn').addEventListener('click', () => {
+        showScreen('nameEntry');
+      });
+      
+      document.getElementById('back-from-create-btn').addEventListener('click', () => {
+        // Notify server that player is leaving the room
+        leaveRoom();
+        showScreen('nameEntry');
+      });
+      
+      // Home button from game screen
+      document.getElementById('back-to-home-btn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to leave the game? Your opponent will be notified.')) {
+          // Notify server that player is leaving the room
+          leaveRoom();
+          showScreen('nameEntry');
+        }
+      });
+      
+      // Join room screen
+      document.getElementById('join-room-btn').addEventListener('click', () => {
+        const codeInput = document.getElementById('join-code');
+        const roomCode = codeInput.value.trim().toUpperCase();
+        
+        if (!roomCode) {
+          showToast('Code Required', 'Please enter a room code');
+          return;
+        }
+        
+        // Join a room on the server
+        sendMessage({
+          type: 'JOIN_ROOM',
+          roomCode,
+          playerName: gameState.playerName
+        });
+      });
+      
+      // Create room screen
+      document.getElementById('start-game-btn').addEventListener('click', () => {
+        gameState.playerSymbol = 'X'; // Creator is always X
+        showScreen('game');
+        initGameScreen();
+      });
+
+      // Copy room code button
+      document.getElementById('copy-code-btn').addEventListener('click', () => {
+        const roomCode = document.getElementById('room-code').textContent;
+  
+        // ตรวจสอบว่า Clipboard API สามารถใช้งานได้หรือไม่
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(roomCode)
+            .then(() => {
+              showToast('Copied!', 'Room code copied to clipboard');
+            })
+            .catch(err => {
+              console.error('Could not copy text: ', err);
+              fallbackCopyTextToClipboard(roomCode);
+            });
+        } else {
+          // ใช้วิธีสำรองถ้า Clipboard API ไม่สามารถใช้งานได้
+          fallbackCopyTextToClipboard(roomCode);
+        }
+      });
+      
+      // Game screen
+      document.getElementById('play-again-btn').addEventListener('click', () => {
+        console.log("Sending reset game request");
+        
+        // Reset the game board immediately on the client side
+        resetGameBoard();
+        
+        // Then send the reset request to the server
+        const sent = sendMessage({
+          type: 'RESET_GAME',
+          roomCode: gameState.roomCode
+        });
+        
+        if (!sent) {
+          showToast('Connection Error', 'Could not send reset request to server.');
+        }
+      });
+      
+      // Reset scores button
+      const resetScoresBtn = document.getElementById('reset-scores-btn');
+      resetScoresBtn.addEventListener('click', () => {
+        console.log("Sending reset scores request");
+        
+        // Reset scores locally first
+        gameState.scores.X = 0;
+        gameState.scores.O = 0;
+        gameState.ultimateWinner = null;
+        gameState.lastWinner = null;
+        
+        // Update UI
+        updateScores();
+        
+        // Send the reset scores request to the server
+        const sent = sendMessage({
+          type: 'RESET_SCORES',
+          roomCode: gameState.roomCode
+        });
+        
+        if (!sent) {
+          showToast('Connection Error', 'Could not send reset scores request to server.');
+        } else {
+          showToast('Scores Reset', 'All scores have been reset. Starting a new match!');
+        }
+      });
+      
+      // Game board cells
+      document.querySelectorAll('.cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const index = parseInt(cell.dataset.index);
+          
+          // Check if it's a valid move
+          if (
+            gameState.status !== 'playing' || 
+            gameState.board[index] !== null || 
+            gameState.currentTurn !== gameState.playerSymbol ||
+            gameState.pendingMoves[index] // Don't allow clicking on cells with pending moves
+          ) {
+            return;
+          }
+          
+          // Generate a unique move ID for this move
+          const moveId = generateMoveId();
+          
+          // Mark this move as pending acknowledgment
+          gameState.pendingMoves[index] = {
+            moveId,
+            timestamp: Date.now(),
+            minDisplayUntil: Date.now() + 500 // Ensure pending state shows for at least 500ms
+          };
+          
+          // Update the board to show pending state
+          const originalValue = gameState.board[index];
+          gameState.board[index] = gameState.playerSymbol;
+          
+          // Force a reflow to ensure CSS changes are applied immediately
+          cell.offsetHeight;
+          
+          // Update the cell UI to show pending state - force direct DOM manipulation
+          cell.textContent = gameState.playerSymbol;
+          cell.classList.add(gameState.playerSymbol.toLowerCase());
+          
+          // Force another reflow before adding animation classes
+          cell.offsetHeight;
+          
+          // Add pending classes
+          cell.classList.add('pending');
+          cell.classList.add('ack-pending');
+          console.log(`Added pending classes to cell ${index}`);
+          
+          console.log(`Sending move at position ${index} with moveId ${moveId}`);
+          
+          // Send move to the server with the move ID
+          const sent = sendMessage({
+            type: 'MAKE_MOVE',
+            roomCode: gameState.roomCode,
+            position: index,
+            player: gameState.playerSymbol,
+            moveId: moveId
+          });
+          
+          // If sending failed, remove the pending state
+          if (!sent) {
+            delete gameState.pendingMoves[index];
+            gameState.board[index] = originalValue;
+            cell.textContent = originalValue || '';
+            cell.classList.remove(gameState.playerSymbol.toLowerCase());
+            cell.classList.remove('pending');
+            cell.classList.remove('ack-pending');
+          }
+          
+          // Set a timeout to clear the pending state if no ACK is received
+          setTimeout(() => {
+            if (gameState.pendingMoves[index] && gameState.pendingMoves[index].moveId === moveId) {
+              console.log(`No ACK received for move at position ${index} with moveId ${moveId}`);
+              showToast('Move Not Confirmed', 'The server did not confirm your move. Please try again.');
+              delete gameState.pendingMoves[index];
+              gameState.board[index] = originalValue;
+              cell.textContent = originalValue || '';
+              cell.classList.remove(gameState.playerSymbol.toLowerCase());
+              cell.classList.remove('pending');
+              cell.classList.remove('ack-pending');
+            }
+          }, 5000); // 5 second timeout for ACK
+        });
+      });
+
+      // Handle page unload/close
+      window.addEventListener('beforeunload', () => {
+        leaveRoom();
+      });
+    }
+
+// เพิ่มฟังก์ชันทดสอบ WSS สำหรับ Electron ก่อนปิด
+// ฟังก์ชันทดสอบ WSS สำหรับ Electron
+function testWssInElectron() {
+  console.log("Testing WSS connection in Electron...");
+  
+  // ตรวจสอบว่ากำลังรันใน Electron หรือไม่
+  const isElectron = window && window.process && window.process.type;
+  
+  if (!isElectron) {
+    alert("This function is for Electron only. You are running in a browser.");
+    return;
+  }
+  
+  // สร้างกล่องแสดงผลการทดสอบ
+  let testResultDiv = document.getElementById('electron-wss-test-result');
+  if (!testResultDiv) {
+    testResultDiv = document.createElement('div');
+    testResultDiv.id = 'electron-wss-test-result';
+    testResultDiv.style.position = 'fixed';
+    testResultDiv.style.top = '50px';
+    testResultDiv.style.right = '10px';
+    testResultDiv.style.padding = '10px';
+    testResultDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+    testResultDiv.style.color = 'white';
+    testResultDiv.style.borderRadius = '5px';
+    testResultDiv.style.zIndex = '9999';
+    document.body.appendChild(testResultDiv);
+  }
+  
+  testResultDiv.innerHTML = 'Testing WSS connection...';
+  
+  // ทดสอบการเชื่อมต่อ WSS
+  if (websocketClient.isConnected()) {
+    const testMessage = {
+      type: 'TEST_CONNECTION',
+      timestamp: Date.now(),
+      secure: true,
+      electron: true,
+      userAgent: navigator.userAgent
+    };
+    
+    console.log("Sending test message from Electron:", testMessage);
+    
+    // ส่งข้อความทดสอบ
+    const sent = websocketClient.send(testMessage);
+    
+    if (sent) {
+      console.log('Test message sent successfully from Electron');
+      testResultDiv.innerHTML = 'Test message sent. Waiting for response...';
+      
+      // ตั้งค่า timeout สำหรับการรอการตอบกลับ
+      setTimeout(() => {
+        if (testResultDiv.innerHTML.includes('Waiting for response')) {
+          testResultDiv.innerHTML = 'No response received within 5 seconds. Test failed.';
+          testResultDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+        }
+      }, 5000);
+      
+      // เพิ่ม event listener สำหรับการตอบกลับ
+      const handleElectronTestResponse = (data) => {
+        console.log('Received test response in Electron:', data);
+        const latency = Date.now() - data.originalTimestamp;
+        
+        // แสดงผลการทดสอบ
+        testResultDiv.innerHTML = `
+          <strong>WSS Test Results:</strong><br>
+          Connection: ${data.secure ? 'Secure (WSS)' : 'Not secure (WS)'}<br>
+          Latency: ${latency}ms<br>
+          Server: ${data.serverInfo ? data.serverInfo.nodeVersion : 'Unknown'}<br>
+          Protocol: ${data.serverInfo ? data.serverInfo.wsProtocol : 'Unknown'}<br>
+          Time: ${new Date().toLocaleTimeString()}
+        `;
+        
+        testResultDiv.style.backgroundColor = data.secure ? 'rgba(0, 128, 0, 0.8)' : 'rgba(255, 165, 0, 0.8)';
+        
+        // ลบ event listener หลังจากได้รับการตอบกลับ
+        websocketClient.off('TEST_CONNECTION_RESPONSE', handleElectronTestResponse);
+      };
+      
+      websocketClient.on('TEST_CONNECTION_RESPONSE', handleElectronTestResponse);
+    } else {
+      console.error('Failed to send test message from Electron');
+      testResultDiv.innerHTML = 'Failed to send test message. Check console for details.';
+      testResultDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+    }
+  } else {
+    console.error('WebSocket is not connected in Electron');
+    testResultDiv.innerHTML = 'WebSocket is not connected. Cannot test WSS.';
+    testResultDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.8)';
+  }
+}
+
+// เพิ่มฟังก์ชันสำหรับตั้งค่า localtunnel URL
+function setLocaltunnelUrl() {
+  const isElectron = window && window.process && window.process.type;
+  
+  if (!isElectron) {
+    alert("This function is for Electron only. You are running in a browser.");
+    return;
+  }
+  
+  const url = prompt("Enter your localtunnel URL (e.g., your-subdomain.loca.lt):", localStorage.getItem('localtunnelUrl') || "");
+  
+  if (url) {
+    // บันทึก URL ลงใน localStorage
+    localStorage.setItem('localtunnelUrl', url);
+    alert(`Localtunnel URL set to: ${url}\nPlease restart the application to apply changes.`);
+  }
+}
+
+// เพิ่มปุ่มทดสอบ WSS และตั้งค่า localtunnel สำหรับ Electron
+function addElectronControls() {
+  console.log("Adding Electron controls");
+  
+  // ตรวจสอบว่ากำลังรันใน Electron หรือไม่
+  const isElectron = window && window.process && window.process.type;
+  
+  if (isElectron) {
+    // สร้างแถบควบคุม
+    const controlBar = document.createElement('div');
+    controlBar.style.position = 'fixed';
+    controlBar.style.top = '4px';
+    controlBar.style.left = '4px';
+    controlBar.style.display = 'flex';
+    controlBar.style.gap = '4px';
+    controlBar.style.zIndex = '9999';
+    
+    // ปุ่มทดสอบ WSS
+    const testButton = document.createElement('button');
+    testButton.textContent = 'Test WSS';
+    testButton.className = 'py-2 px-4 bg-red-600 text-white rounded-lg text-sm';
+    testButton.onclick = testWssInElectron;
+    controlBar.appendChild(testButton);
+    
+    // ปุ่มตั้งค่า localtunnel
+    const setUrlButton = document.createElement('button');
+    setUrlButton.textContent = 'Set Localtunnel URL';
+    setUrlButton.className = 'py-2 px-4 bg-blue-600 text-white rounded-lg text-sm';
+    setUrlButton.onclick = setLocaltunnelUrl;
+    controlBar.appendChild(setUrlButton);
+    
+    document.body.appendChild(controlBar);
+    console.log("Electron controls added");
+    
+    // แสดง URL ที่ใช้อยู่
+    const currentUrl = localStorage.getItem('localtunnelUrl');
+    if (currentUrl) {
+      console.log("Current localtunnel URL:", currentUrl);
+      
+      // แสดงแบนเนอร์ URL ที่ใช้อยู่
+      const urlBanner = document.createElement('div');
+      urlBanner.style.position = 'fixed';
+      urlBanner.style.top = '40px';
+      urlBanner.style.left = '4px';
+      urlBanner.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+      urlBanner.style.color = 'white';
+      urlBanner.style.padding = '4px 8px';
+      urlBanner.style.borderRadius = '4px';
+      urlBanner.style.fontSize = '10px';
+      urlBanner.style.zIndex = '9998';
+      urlBanner.textContent = `Localtunnel: ${currentUrl}`;
+      document.body.appendChild(urlBanner);
+    }
+  }
+}
+
+// เรียกใช้ฟังก์ชันเพิ่มปุ่มทดสอบเมื่อโหลดหน้าเว็บ
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("DOM fully loaded - initializing Electron test functions");
+  try {
+    addElectronControls();
+    console.log("Electron controls initialization completed");
+  } catch (error) {
+    console.error("Error initializing Electron test functions:", error);
+  }
+});
+    // Initialize the application
+    function init() {
+      connectWebSocket();
+      setupUIEventListeners();
+      startConnectionMonitoring();
+    }
+
+    // Start the application
+    init();
+  </script>
+</body>
+</html>
