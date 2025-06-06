@@ -1,18 +1,26 @@
-# ❌⭕ xoxo-game
+# XOXO - Real-Time Tic-Tac-Toe Game
 
-**xoxo-game** is a simple and responsive Tic-Tac-Toe web game built with **Next.js**, **TypeScript**, and **Tailwind CSS**. It offers a clean interface and smooth user experience for two players taking turns.
+A fun and real-time 2-player Tic-Tac-Toe game built using **HTML**, **CSS (Tailwind)**, and **JavaScript**.  
+This project uses **WebSocket** (via Node.js) to support online multiplayer rooms.
 
-## 🚀 Features
 
-- Sleek and responsive UI with Tailwind CSS
-- Built using modern technologies: Next.js + TypeScript
-- Organized and developer-friendly project structure
+##  Features
 
-## 🛠️ Tech Stack
+- 🎮 Real-time gameplay between 2 players
+- 🔐 Room-based system (create/join with room code)
+- 💻 Built with HTML + Tailwind CSS + JavaScript
+- 🔌 WebSocket-based server (Node.js + Express + ws)
+- 🔁 Supports reconnecting if disconnected
 
-- [Next.js](https://nextjs.org/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [Tailwind CSS](https://tailwindcss.com/)
+---
+
+## 🛠️ Technologies Used
+
+- **Frontend:** HTML, Tailwind CSS, JavaScript
+- **Backend:** Node.js, Express.js, WebSocket (ws)
+
+---
+
 
 ## 📦 Installation
 
@@ -31,4 +39,4 @@
    npm run dev
    
 4. **Open in browser**
-Visit http://localhost:3000 to play the game.
+Visit http://localhost:3001 to play the game.
